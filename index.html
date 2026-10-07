@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cassa Scale</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cassa Scale">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#edf0f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12181e" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<style>
+/* Layout: colonna singola per iPhone — barra con data dei dati, tre numeri chiave, prossima raccolta, chi ha pagato, mesi pagati */
+:root{
+  --bg:#edf0f3; --surface:#ffffff; --ink:#1c2833; --muted:#5d6b78; --line:#d5dbe1;
+  --accent:#0d6a66; --accent-soft:#d6ebe9; --ok:#1f7a45; --ok-soft:#dcefe3;
+  --warn:#9a5b00; --warn-soft:#fbecd2; --bad:#b3261e; --bad-soft:#f8dedc; --brand:#1557c9;
+  --f-body:-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --f-display:ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --f-num:ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12181e; --surface:#1a222a; --ink:#e4eaef; --muted:#93a1ad; --line:#2c3742;
+  --accent:#4fc1b9; --accent-soft:#163a38; --ok:#5cc98a; --ok-soft:#173726;
+  --warn:#f0b459; --warn-soft:#3a2c14; --bad:#f2867e; --bad-soft:#3d1e1c; --brand:#5b9bff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181e; --surface:#1a222a; --ink:#e4eaef; --muted:#93a1ad; --line:#2c3742;
+  --accent:#4fc1b9; --accent-soft:#163a38; --ok:#5cc98a; --ok-soft:#173726;
+  --warn:#f0b459; --warn-soft:#3a2c14; --bad:#f2867e; --bad-soft:#3d1e1c; --brand:#5b9bff; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:flex;flex-direction:column;gap:18px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px}
+.bar h1{font-family:var(--f-display);font-size:1.5rem;margin:0;line-height:1.1}
+.bar small{display:block;color:var(--muted);font-size:.8rem}
+.btn{font:inherit;font-weight:600;font-size:.95rem;border:0;border-radius:12px;padding:10px 14px;background:var(--brand);color:#fff;cursor:pointer;white-space:nowrap}
+.btn.sec{background:var(--surface);color:var(--brand);border:1px solid var(--line)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .v{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:1.6rem;line-height:1.15}
+.kpi .n{font-size:.82rem;color:var(--muted)}
+.kpi.wide{grid-column:1 / -1;border-color:var(--warn);background:var(--warn-soft)}
+.kpi.wide .v{font-family:var(--f-display);font-weight:700;font-size:1.5rem;color:var(--warn)}
+.kpi.wide .n,.kpi.wide .label{color:var(--warn)}
+.kpi.late{border-color:var(--bad);background:var(--bad-soft)}
+.kpi.late .v,.kpi.late .n,.kpi.late .label{color:var(--bad)}
+.neg{color:var(--bad)}
+h2{font-family:var(--f-display);font-size:1.15rem;margin:0 0 4px}
+.sub{color:var(--muted);font-size:.88rem;margin:0}
+.list{list-style:none;margin:10px 0 0;padding:0}
+.list li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.mark{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.95rem}
+.ok .mark{background:var(--ok-soft);color:var(--ok)}
+.no .mark{background:var(--bad-soft);color:var(--bad)}
+.part .mark{background:var(--warn-soft);color:var(--warn)}
+.ex .mark{background:var(--bg);color:var(--muted)}
+.who{min-width:0}
+.who b{font-weight:600;display:block;overflow-wrap:anywhere}
+.who span{font-size:.82rem;color:var(--muted)}
+.amt{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:.95rem}
+.amt span{display:block;font-family:var(--f-body);font-size:.78rem;color:var(--muted)}
+.no .amt{color:var(--bad);font-family:var(--f-body);font-size:.85rem;font-weight:600}
+.ex .amt{color:var(--muted);font-family:var(--f-body);font-size:.85rem}
+.prog{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.months{list-style:none;margin:10px 0 0;padding:0}
+.months li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.95rem}
+.months li:first-child{border-top:0}
+.months .d{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--accent);color:var(--accent);border-radius:99px;padding:3px 10px;font-size:.85rem}
+.note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+.empty{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;padding:28px 18px}
+.empty .ico{width:84px;height:84px;border-radius:20px;background:linear-gradient(160deg,#3a8bf0,#0d4fc0);display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:800;font-size:2rem;box-shadow:0 6px 18px rgba(13,79,192,.3)}
+.empty ol{text-align:left;margin:0;padding-left:20px;color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:6px}
+.empty code{font-family:var(--f-body);font-weight:600;color:var(--ink)}
+.err{color:var(--bad);font-size:.9rem;margin:0}
+.foot{text-align:center;font-size:.8rem;color:var(--muted)}
+.stale{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:.88rem}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <div><h1>Cassa Scale</h1><small id="when">Sola lettura</small></div>
+    <button class="btn" id="pick" type="button">Apri dati</button>
+  </div>
+  <input type="file" id="file" hidden>
+  <p class="err" id="err" hidden></p>
+
+  <section class="card empty" id="empty">
+    <div class="ico" aria-hidden="true">€</div>
+    <h2>Apri il file dei dati</h2>
+    <ol>
+      <li>Sul Mac, nell'app Cassa Scale, attiva <code>Impostazioni › Salva in iCloud Drive</code>.</li>
+      <li>Qui tocca <code>Apri dati</code> e scegli <code>iCloud Drive › Cassa Scale › cassa-scale.json</code>.</li>
+    </ol>
+    <button class="btn" id="pick2" type="button">Apri dati da iCloud Drive</button>
+  </section>
+
+  <div id="view" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div class="stale" id="stale" hidden></div>
+      <div class="kpis">
+        <div class="kpi wide" id="kDue"><span class="label">Ripartire con la raccolta entro</span><span class="v" id="vDue"></span><span class="n" id="nDue"></span></div>
+        <div class="kpi"><span class="label">In cassa</span><span class="v" id="vCassa"></span><span class="n" id="nCassa"></span></div>
+        <div class="kpi"><span class="label">Mesi ancora coperti</span><span class="v" id="vMesi"></span><span class="n" id="nMesi"></span></div>
+      </div>
+
+      <section class="card">
+        <h2 id="hNext">Prossima raccolta</h2>
+        <p class="sub" id="pNext"></p>
+      </section>
+
+      <section class="card">
+        <h2 id="hCur">Raccolta in corso</h2>
+        <p class="sub" id="pCur"></p>
+        <div class="prog" aria-hidden="true"><i id="barCur" style="width:0"></i></div>
+        <ul class="list" id="listCur"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Mesi che la cassa copre ancora</h2>
+        <p class="sub" id="pCover"></p>
+        <div class="chips" id="chipsCover"></div>
+        <p class="note" id="nCover"></p>
+      </section>
+
+      <section class="card">
+        <h2>Mesi di pulizia pagati</h2>
+        <p class="sub" id="pPaid"></p>
+        <ul class="months" id="listPaid"></ul>
+      </section>
+
+      <p class="foot">Sola lettura: le modifiche si fanno dall'app Cassa Scale sul Mac.<br>Per vedere i dati più recenti tocca «Aggiorna» e riapri il file.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const MAX = 10;
+  const DEFAULT = {quota:60, spesa:60, inizio:"2026-10", condomini:[], raccolte:[], mesi:{}, scadenza:null};
+  let state = clone(DEFAULT);
+  const $ = id => document.getElementById(id);
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  const r2 = v => Math.round(v*100)/100;
+  const eur = v => new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",minimumFractionDigits: v%1?2:0, maximumFractionDigits:2}).format(v);
+  const parseKey = k => k.split("-").map(Number);
+  const monthName = (key, style) => { const [y,m]=parseKey(key); return new Date(y,m-1,1).toLocaleDateString("it-IT", style==="short"?{month:"short"}:{month:"long",year:"numeric"}); };
+  const shortMonth = key => { const [y]=parseKey(key); return monthName(key,"short").replace(".","")+" "+String(y).slice(2); };
+  const cap = s => s.replace(/^./,x=>x.toUpperCase());
+  const aD = t => (/^[aeiou]/i.test(t)?"ad ":"a ")+t;
+  const aM = (k, st) => aD(monthName(k, st));
+  const aSM = k => aD(shortMonth(k));
+  const keysFrom = (start, n) => { const [y,m]=parseKey(start); return Array.from({length:n},(_,i)=>{const d=new Date(y,m-1+i,1);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}); };
+  const iso = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const today = () => iso(new Date());
+  const fromIso = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+  const longDate = s => fromIso(s).toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const shortDate = s => fromIso(s).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"});
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const plural = (n,one,many) => n===1 ? "1 "+one : n+" "+many;
+
+  function normalize(src){
+    const s = Object.assign(clone(DEFAULT), src||{});
+    if(!Array.isArray(s.condomini)) s.condomini=[];
+    if(!s.mesi||typeof s.mesi!=="object") s.mesi={};
+    if(!Array.isArray(s.raccolte)) s.raccolte=[];
+    // dalle versioni precedenti: i versamenti stavano sul condomino, diventano la raccolta n. 1
+    if(!s.raccolte.length){
+      const vers={};
+      s.condomini.forEach(c=>{ const v = typeof c.versato==="number" ? c.versato : (c.pagato ? (+s.quota||0) : 0); if(v>0 && c.id) vers[c.id]={versato:v, data:c.data||null}; });
+      s.raccolte.push({id:uid(), apertura:(s.inizio||DEFAULT.inizio)+"-01", quota:+s.quota||0, versamenti:vers});
+    }
+    s.raccolte = s.raccolte.map(r=>({id:r.id||uid(), apertura:r.apertura||today(), quota:typeof r.quota==="number"?r.quota:(+s.quota||0), versamenti:(r.versamenti&&typeof r.versamenti==="object")?r.versamenti:{}}));
+    s.condomini = s.condomini.map(c=>({id:c.id||uid(), nome:c.nome||"", interno:c.interno||"", telefono:c.telefono||"", note:c.note||"",
+      escluso: c.escluso && c.escluso.da && c.escluso.a ? {da:c.escluso.da, a:c.escluso.a, motivo:c.escluso.motivo||""} : null}));
+    delete s.integrazione;
+    return s;
+  }
+  // ---- calcoli ----
+  const meseDi = isoDate => isoDate.slice(0,7);
+  function esclusoIn(p, key){
+    if(!p.escluso) return false;
+    let da=p.escluso.da, a=p.escluso.a; if(da>a){ const t=da; da=a; a=t; }
+    return key>=da && key<=a;
+  }
+  // UNICA REGOLA DI ESCLUSIONE, usata ovunque (raccolte passate, in corso, prossima, anteprima):
+  // un condomino salta una raccolta se il suo periodo di esclusione comprende
+  // il primo mese di pulizie che quella raccolta paga.
+  const dovuto = (p, r, startKey) => esclusoIn(p, startKey) ? 0 : r.quota;
+
+  function calc(){
+    const q = +state.quota||0, s = +state.spesa||0;
+    const n = state.condomini.length;
+    const cur = state.raccolte[state.raccolte.length-1];
+    let cum = 0;
+    const allKeys0 = keysFrom(state.inizio||DEFAULT.inizio, 120);
+    const racc = state.raccolte.map((r,i)=>{
+      const startKey = allKeys0[s>0 ? Math.floor(cum/s) : 0];
+      const dov = {}; state.condomini.forEach(p=>{ dov[p.id]=dovuto(p,r,startKey); });
+      const attesi = r2(state.condomini.reduce((a,p)=>a+dov[p.id],0));
+      const incassato = r2(Object.values(r.versamenti).reduce((a,v)=>a+(+v.versato||0),0));
+      const base = Math.max(attesi, incassato);
+      const startIdx = s>0 ? Math.floor(cum/s) : 0;
+      cum = r2(cum + base);
+      const endIdx = s>0 ? Math.floor(cum/s)-1 : 0;
+      const paganti = state.condomini.filter(p=>dov[p.id]>0);
+      const completi = paganti.filter(p=>((r.versamenti[p.id]||{}).versato||0)>=dov[p.id]).length;
+      const esclusi = state.condomini.filter(p=>!dov[p.id]).map(p=>p.nome);
+      return {r, i, n:i+1, startKey, dov, esclusi, attesi, incassato, startIdx, endIdx, mesi:Math.max(0,endIdx-startIdx+1), paganti:paganti.length, completi};
+    });
+    const coveredIdx = s>0 ? Math.floor(cum/s) : 0;     // primo mese non coperto dalle raccolte avviate
+    const resto = r2(cum - coveredIdx*s);                 // soldi che passano alla raccolta successiva
+    const raccolto = r2(racc.reduce((a,x)=>a+x.incassato,0));
+    // mesi da mostrare: dall'inizio fino a qualche mese dopo l'ultimo coperto
+    const pagatiKeys = Object.keys(state.mesi).filter(k=>state.mesi[k]&&state.mesi[k].pagato);
+    const lastPaidIdx = pagatiKeys.reduce((a,k)=>Math.max(a, allKeys0.indexOf(k)), -1);
+    const L = Math.min(120, Math.max(12, coveredIdx+3, lastPaidIdx+3));
+    const keys = allKeys0.slice(0, L);
+    const pagati = pagatiKeys.filter(k=>allKeys0.indexOf(k)>=0);
+    const mesiPagati = pagati.length;
+    const speso = r2(pagati.reduce((a,k)=>a+(typeof state.mesi[k].importo==="number"?state.mesi[k].importo:s),0));
+    const saldo = r2(raccolto-speso);
+    // prossima raccolta
+    const nextKey = allKeys0[coveredIdx];
+    const [ny,nm] = parseKey(nextKey);
+    const autoDue = iso(new Date(ny,nm-1,0));            // ultimo giorno del mese prima
+    const due = state.scadenza || autoDue;
+    const nextEsclusi = state.condomini.filter(p=>esclusoIn(p, nextKey));
+    const nextPaganti = state.condomini.length - nextEsclusi.length;
+    const nextTot = r2(nextPaganti*q);
+    const nextMesi = s>0 ? Math.floor((resto+nextTot)/s) : 0;
+    const firstUnpaidIdx = keys.findIndex(k=>!(state.mesi[k]&&state.mesi[k].pagato));
+    return {q,s,n,cur,racc,cum,coveredIdx,resto,raccolto,keys,allKeys0,mesiPagati,speso,saldo,nextKey,autoDue,due,nextEsclusi,nextPaganti,nextTot,nextMesi,firstUnpaidIdx};
+  }
+  function salteInfo(c, pid){
+    const salta = c.racc.filter(y=>!y.dov[pid]).map(y=>"n. "+y.n);
+    if(c.nextEsclusi.some(p=>p.id===pid)) salta.push("n. "+(c.racc.length+1)+" (prossima)");
+    return salta;
+  }
+  const raccoltaDelMese = (c, idx) => c.racc.find(x=>idx>=x.startIdx && idx<=x.endIdx);
+  const periodoTxt = (c, x) => x.mesi<=0 ? "nessun mese" : x.mesi===1 ? cap(monthName(c.allKeys0[x.startIdx])) : shortMonth(c.allKeys0[x.startIdx])+" – "+shortMonth(c.allKeys0[x.endIdx]);
+
+
+  // ---- vista per iPhone (sola lettura) ----
+  const STORE="cassa-scale-iphone";
+  function show(data, meta){
+    state = normalize(data);
+    const c = calc();
+    $("empty").hidden=true; $("view").hidden=false; $("pick").textContent="Aggiorna";
+    $("when").textContent = meta && meta.modified ? "Dati salvati il "+new Date(meta.modified).toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}) : "Sola lettura";
+    // avviso se i dati hanno più di 7 giorni
+    const age = meta && meta.modified ? (Date.now()-meta.modified)/86400000 : 0;
+    $("stale").hidden = age<7;
+    $("stale").textContent = "Questi dati hanno "+Math.floor(age)+" giorni. Tocca «Aggiorna» e riapri il file da iCloud Drive per vedere quelli nuovi.";
+
+    // ripartire entro
+    const days = Math.round((fromIso(c.due)-fromIso(today()))/86400000);
+    $("kDue").className = "kpi wide"+(days<0?" late":"");
+    $("vDue").textContent = cap(fromIso(c.due).toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"long",year:"numeric"}));
+    $("nDue").textContent = (days<0 ? "Scaduta da "+plural(-days,"giorno","giorni") : days===0 ? "Scade oggi" : "Tra "+plural(days,"giorno","giorni"))+" · da "+monthName(c.nextKey)+" servono soldi nuovi";
+
+    // cassa e mesi coperti (soldi reali)
+    const fu = c.firstUnpaidIdx<0 ? c.keys.length : c.firstUnpaidIdx;
+    const restano = c.s>0 ? Math.max(0, Math.floor(c.saldo/c.s)) : 0;
+    const mesiCassa = restano>0 ? c.allKeys0.slice(fu, fu+restano) : [];
+    $("vCassa").textContent = eur(c.saldo); $("vCassa").classList.toggle("neg", c.saldo<0);
+    $("nCassa").textContent = "Raccolti "+eur(c.raccolto)+" · spesi "+eur(c.speso);
+    $("vMesi").textContent = restano;
+    $("nMesi").textContent = restano ? "fino "+aM(mesiCassa[mesiCassa.length-1]) : "la cassa è vuota";
+
+    // prossima raccolta
+    $("hNext").textContent = "Prossima raccolta · n. "+(c.racc.length+1);
+    $("pNext").textContent = eur(c.q)+" a testa da "+plural(c.nextPaganti,"persona","persone")+": "+eur(c.nextTot)+", coprono "+plural(c.nextMesi,"mese","mesi")+(c.nextMesi?" (fino "+aM(c.allKeys0[c.coveredIdx+c.nextMesi-1])+")":"")+"."+(c.nextEsclusi.length?" Saltano: "+c.nextEsclusi.map(p=>p.nome).join(", ")+".":"");
+
+    // raccolta in corso
+    const x = c.racc[c.racc.length-1], R=x.r;
+    $("hCur").textContent = "Raccolta in corso · n. "+x.n;
+    $("pCur").textContent = x.completi+" su "+x.paganti+" hanno versato · "+eur(x.incassato)+" su "+eur(x.attesi)+" · copre "+periodoTxt(c,x);
+    $("barCur").style.width = (x.attesi?Math.min(100,x.incassato/x.attesi*100):0)+"%";
+    const ul=$("listCur"); ul.innerHTML="";
+    const righe=[];
+    state.condomini.forEach(p=>{
+      const v=R.versamenti[p.id], imp=v?+v.versato||0:0, dov=x.dov[p.id];
+      let cls, mark, amt, sub;
+      if(imp>0 && imp>=dov){ cls="ok"; mark="✓"; amt=eur(imp); sub=v.data?fromIso(v.data).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}):""; }
+      else if(imp>0){ cls="part"; mark="◐"; amt=eur(imp)+" su "+eur(dov); sub=v.data?fromIso(v.data).toLocaleDateString("it-IT",{day:"numeric",month:"short"}):""; }
+      else if(!dov){ cls="ex"; mark="—"; amt="Escluso"; sub=""; }
+      else { cls="no"; mark="✗"; amt="Da versare"; sub=""; }
+      righe.push({cls,mark,amt,sub,nome:p.nome,info:[p.interno, cls==="ex"&&p.escluso&&p.escluso.motivo?p.escluso.motivo:""].filter(Boolean).join(" · ")});
+    });
+    Object.entries(R.versamenti).forEach(([id,v])=>{ if(!state.condomini.some(p=>p.id===id)&&(+v.versato||0)>0) righe.push({cls:"ok",mark:"✓",amt:eur(+v.versato),sub:v.data?fromIso(v.data).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"}):"",nome:(v.nome||"Condomino")+" (rimosso)",info:""}); });
+    // prima chi deve ancora versare
+    const ord={no:0,part:1,ok:2,ex:3}; righe.sort((a,b)=>ord[a.cls]-ord[b.cls]);
+    righe.forEach(r=>{
+      const li=document.createElement("li"); li.className=r.cls;
+      const m=document.createElement("span"); m.className="mark"; m.textContent=r.mark; m.setAttribute("aria-hidden","true");
+      const w=document.createElement("div"); w.className="who"; const b=document.createElement("b"); b.textContent=r.nome; w.append(b);
+      if(r.info){ const sp=document.createElement("span"); sp.textContent=r.info; w.append(sp); }
+      const a=document.createElement("div"); a.className="amt"; a.textContent=r.amt;
+      if(r.sub){ const sp=document.createElement("span"); sp.textContent=r.sub; a.append(sp); }
+      li.append(m,w,a); ul.append(li);
+    });
+
+    // mesi coperti
+    $("pCover").textContent = "Con "+eur(Math.max(0,c.saldo))+" in cassa si pagano ancora "+plural(restano,"mese","mesi")+".";
+    const ch=$("chipsCover"); ch.innerHTML="";
+    mesiCassa.forEach(k=>{ const s=document.createElement("span"); s.className="chip"; s.textContent=cap(monthName(k)); ch.append(s); });
+    const daCoprire = Math.max(0, c.coveredIdx-fu);
+    $("nCover").textContent = daCoprire>restano && c.coveredIdx>0 ? "Se versano anche quelli che mancano, si arriva a "+plural(daCoprire,"mese","mesi")+", fino "+aM(c.allKeys0[c.coveredIdx-1])+"." : "";
+
+    // mesi pagati, dal più recente
+    const pag = Object.keys(state.mesi).filter(k=>state.mesi[k]&&state.mesi[k].pagato).sort().reverse();
+    $("pPaid").textContent = pag.length ? plural(pag.length,"mese pagato","mesi pagati")+" · totale "+eur(c.speso) : "Nessun mese pagato ancora.";
+    const lp=$("listPaid"); lp.innerHTML="";
+    pag.forEach(k=>{ const m=state.mesi[k]; const li=document.createElement("li");
+      const a=document.createElement("span"); a.textContent=cap(monthName(k));
+      const d=document.createElement("span"); d.className="d"; d.textContent=(m.data?"pagato il "+fromIso(m.data).toLocaleDateString("it-IT",{day:"numeric",month:"short"})+" · ":"")+eur(typeof m.importo==="number"?m.importo:c.s);
+      li.append(a,d); lp.append(li); });
+  }
+
+  function err(msg){ const e=$("err"); e.textContent=msg; e.hidden=!msg; }
+  function pick(){ err(""); $("file").value=""; $("file").click(); }
+  $("pick").addEventListener("click",pick); $("pick2").addEventListener("click",pick);
+  $("file").addEventListener("change",()=>{
+    const f=$("file").files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      let data;
+      try{ data=JSON.parse(rd.result); }catch(e){ err("Questo file non si legge. Scegli cassa-scale.json nella cartella «Cassa Scale» di iCloud Drive."); return; }
+      if(!data || !Array.isArray(data.condomini)){ err("Questo non è il file di Cassa Scale. Scegli cassa-scale.json nella cartella «Cassa Scale»."); return; }
+      const meta={modified:f.lastModified||Date.now(), name:f.name};
+      show(data, meta);
+      // ricorda l'ultimo file aperto su questo iPhone, così alla prossima apertura i dati ci sono già
+      try{ localStorage.setItem(STORE, JSON.stringify({data, meta})); }catch(e){}
+    };
+    rd.onerror=()=>err("Non riesco a leggere il file. Se è in iCloud, aspetta che sia scaricato e riprova.");
+    rd.readAsText(f);
+  });
+  try{ const saved=JSON.parse(localStorage.getItem(STORE)||"null"); if(saved && saved.data) show(saved.data, saved.meta); }catch(e){}
+})();
+</script>
+
+</body>
+</html>
